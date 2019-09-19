@@ -166,10 +166,11 @@ class Transaction(object):
         """ Check for valid transaction state.
         By default, raises exception if transaction is closed
         """
+        states = {False:'closed', True:'opened'}
         #check if file is inside temporary tree
         if self.opened != should:
             raise RuntimeError("This Transaction object is not " +
-                               "currenly in right state")
+                               "currenly in %s state" % states[should])
     def check_inside(self, name):
         """
         Checks if given filename is inside working tree.

@@ -314,5 +314,17 @@ class FsTransTestCase(unittest.TestCase):
                          "This is file outside transaction\n")
         self.assertEqual(sorted(os.listdir(".")), ["testfile.txt", "workdir"])
         self.assertEqual(sorted(os.listdir("workdir")), ["testfile.txt"])
+    def test_clonetree(self):
+        os.mkdir("workdir")
+        os.mkdir("workdir/subdir")
+        putfile("workdir/subdir/file1","file1 content\n")
+        putfile("workdir/subdir/file2","file2 content\n")
+        with Transaction("workdir") as txn:
+            self.assertEqual(os.stat("subdir/file1").st_nlink,2)
+            self.assertEqual(os.stat("subdir/file1").st_nlink,2)
+            txn.clonetree('subdir')
+            self.assertEqual(os.stat("subdir/file1").st_nlink,1)
+            self.assertEqual(os.stat("subdir/file1").st_nlink,1)
+
 if __name__ == '__main__':
     unittest.main()
