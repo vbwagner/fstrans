@@ -177,9 +177,10 @@ class Transaction(object):
         If not, raises ValueError
         """
         fullname = os.path.realpath(name)
-        if not fullname.startswith(os.path.join(self.root, self.workdir) + "/"):
-            raise ValueError("path '%s' should be"+\
-            "inside working tree" % name)
+        mydir = os.path.join(self.root, self.workdir)
+        if fullname != mydir and not fullname.startswith(mydir + "/"):
+            raise ValueError(("path '%s' should be"+\
+            "inside working tree") % name)
         return fullname
     def open(self, name, mode='r', **kwargs):
         """
