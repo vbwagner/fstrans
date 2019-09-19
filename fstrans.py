@@ -36,10 +36,10 @@ def copy_tree(old, new):
         newdir = new + root[len(old):]
         if newdir != new:
             os.mkdir(newdir, os.stat(root).st_mode)
-        for f in files:
+        for f in files: #pylint: disable=invalid-name
             os.link(os.path.join(root, f), os.path.join(newdir, f))
 
-class Transaction(object):
+class Transaction:
     """
     Atomic modification for directory tree.
     Creates working copy and lets modify it.
@@ -179,8 +179,7 @@ class Transaction(object):
         fullname = os.path.realpath(name)
         mydir = self.root
         if fullname != mydir and not fullname.startswith(mydir + "/"):
-            raise ValueError(("path '%s' should be"+\
-            "inside working tree") % name)
+            raise ValueError("path '%s' should be inside working tree" % name)
         return fullname
     @property
     def root(self):
@@ -192,8 +191,7 @@ class Transaction(object):
         """
         if self.opened:
             return os.path.join(self.parent, self.workdir)
-        else:
-            return os.path.join(self.parent, self.commited)
+        return os.path.join(self.parent, self.commited)
 
     def open(self, name, mode='r', **kwargs):
         """
@@ -215,7 +213,7 @@ class Transaction(object):
             os.unlink(fullname)
             if "r" in mode:
                 # Need to touch file first
-                open(fullname,"w").close()
+                open(fullname, "w").close()
             outf = open(fullname, mode)
             shutil.copyfileobj(inf, outf)
             inf.close()
@@ -261,7 +259,4 @@ class Transaction(object):
         fullname = self.check_inside(path)
         for (root, _, files) in os.walk(fullname):
             for filename in files:
-                self.clonefile(os.path.join(root,filename))
-
-
-
+                self.clonefile(os.path.join(root, filename))

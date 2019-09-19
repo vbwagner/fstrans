@@ -13,13 +13,14 @@ def getfile(filename):
     """
     Helper function - returns content of given file
     """
-    with open(filename, "r") as f:
+    with open(filename, "r") as f: #pylint: disable=invalid-name
         return f.read()
 def putfile(filename, content):
     """
     Helper function - stores given string into given file
     """
-    with open(filename, "w") as f:
+    with open(filename, "w") as f: #pylint: disable=invalid-name
+
         f.write(content)
 class FsTransTestCase(unittest.TestCase):
     """
@@ -78,6 +79,7 @@ class FsTransTestCase(unittest.TestCase):
         os.mkdir("workdir")
         putfile("workdir/testfile.txt", "This is test file content\n")
         with Transaction("workdir") as txn:
+            #pylint: disable=invalid-name
             with txn.open("testfile.txt", "w") as f:
                 f.write("This is changed content\n")
         # Transaction is commited
@@ -95,6 +97,7 @@ class FsTransTestCase(unittest.TestCase):
         os.mkdir("workdir")
         putfile("workdir/testfile.txt", "This is test file content\n")
         with Transaction("workdir") as txn:
+            #pylint: disable=invalid-name
             with txn.open("testfile.txt", "r+") as f:
                 f.seek(0, 0)
                 f.write("That")
@@ -113,6 +116,7 @@ class FsTransTestCase(unittest.TestCase):
         os.mkdir("workdir")
         putfile("workdir/testfile.txt", "This is test file content\n")
         with Transaction("workdir") as txn:
+            # pylint: disable=invalid-name
             with txn.open("testfile.txt", "a") as f:
                 f.write("This is changed content\n")
         # transaction is commited
@@ -131,6 +135,7 @@ class FsTransTestCase(unittest.TestCase):
         putfile("workdir/testfile.txt", "This is test file content\n")
         try:
             with Transaction("workdir") as txn:
+                # pylint: disable=invalid-name
                 with txn.open("testfile.txt", "w") as f:
                     self.assertEqual(os.stat(f.fileno()).st_nlink, 1)
                     f.write("This is changed content\n")
@@ -315,19 +320,32 @@ class FsTransTestCase(unittest.TestCase):
         self.assertEqual(sorted(os.listdir(".")), ["testfile.txt", "workdir"])
         self.assertEqual(sorted(os.listdir("workdir")), ["testfile.txt"])
     def test_clonetree(self):
+        """
+        Create some directory hierarchy start transaction and
+        clone it.
+
+        See if all files in the cloned tree has one link
+        """
         os.mkdir("workdir")
         os.mkdir("workdir/subdir")
-        putfile("workdir/subdir/file1","file1 content\n")
-        putfile("workdir/subdir/file2","file2 content\n")
+        putfile("workdir/subdir/file1", "file1 content\n")
+        putfile("workdir/subdir/file2", "file2 content\n")
         with Transaction("workdir") as txn:
-            self.assertEqual(os.stat("subdir/file1").st_nlink,2)
-            self.assertEqual(os.stat("subdir/file1").st_nlink,2)
+            self.assertEqual(os.stat("subdir/file1").st_nlink, 2)
+            self.assertEqual(os.stat("subdir/file1").st_nlink, 2)
             txn.clonetree('subdir')
-            self.assertEqual(os.stat("subdir/file1").st_nlink,1)
-            self.assertEqual(os.stat("subdir/file1").st_nlink,1)
+            self.assertEqual(os.stat("subdir/file1").st_nlink, 1)
+            self.assertEqual(os.stat("subdir/file1").st_nlink, 1)
     def test_root(self):
+        """
+        Test if root property outside  transaction context points to
+        commited tree and instide into temporary tree
+
+        Check if entering transaction context changed directory
+        into root of temporary tree and leaving restores it
+        """
         os.mkdir("workdir")
-        parent=os.getcwd()
+        parent = os.getcwd()
         txn = Transaction("workdir")
         self.assertEqual(txn.root, os.path.join(parent, "workdir"))
         with txn:
@@ -336,21 +354,29 @@ class FsTransTestCase(unittest.TestCase):
         self.assertEqual(txn.root, os.path.join(parent, "workdir"))
         self.assertEqual(os.getcwd(), parent)
     def test_checkopened(self):
+        """
+        Test internal method check_opened which raises a runtime
+        error when called in untexpeded state
+        """
         os.mkdir("workdir")
         txn = Transaction("workdir")
         with self.assertRaises(RuntimeError):
             txn.check_opened()
-        # No exception should be raised    
-        txn.check_opened(False)    
+        # No exception should be raised
+        txn.check_opened(False)
         with txn:
             txn.check_opened()
             with self.assertRaises(RuntimeError):
                 txn.check_opened(False)
     def test_checkinside(self):
+        """
+        Test check_inside method, which checks whether path is inside
+        a transaction, and raises ValueError if not.
+        """
         os.mkdir("workdir")
         os.mkdir("workdir/subdir")
         os.mkdir("outsidedir")
-        txn=Transaction("workdir")
+        txn = Transaction("workdir")
         parent = os.getcwd()
         outsider = os.path.realpath("outsidedir")
         with self.assertRaises(ValueError):
@@ -358,22 +384,21 @@ class FsTransTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             txn.check_inside(".")
         self.assertEqual(txn.check_inside(os.path.realpath("workdir")),
-                         os.path.join(parent,"workdir"))
+                         os.path.join(parent, "workdir"))
         self.assertEqual(txn.check_inside("workdir"),
-                         os.path.join(parent,"workdir"))
+                         os.path.join(parent, "workdir"))
         self.assertEqual(txn.check_inside("workdir/subdir"),
-                         os.path.join(parent,"workdir","subdir"))
+                         os.path.join(parent, "workdir", "subdir"))
         with txn:
             with self.assertRaises(ValueError):
                 txn.check_inside(parent)
             self.assertEqual(txn.check_inside("."), txn.root)
             self.assertEqual(txn.check_inside("subdir"),
-                             os.path.join(txn.root,"subdir"))
+                             os.path.join(txn.root, "subdir"))
             with self.assertRaises(ValueError):
                 txn.check_inside(outsider)
             with self.assertRaises(ValueError):
-                txn.check_inside(os.path.join(parent,"workdir"))
+                txn.check_inside(os.path.join(parent, "workdir"))
 
-            
 if __name__ == '__main__':
     unittest.main()
