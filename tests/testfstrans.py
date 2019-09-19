@@ -325,6 +325,55 @@ class FsTransTestCase(unittest.TestCase):
             txn.clonetree('subdir')
             self.assertEqual(os.stat("subdir/file1").st_nlink,1)
             self.assertEqual(os.stat("subdir/file1").st_nlink,1)
+    def test_root(self):
+        os.mkdir("workdir")
+        parent=os.getcwd()
+        txn = Transaction("workdir")
+        self.assertEqual(txn.root, os.path.join(parent, "workdir"))
+        with txn:
+            self.assertEqual(txn.root, os.path.join(parent, ".workdir"))
+            self.assertEqual(txn.root, os.getcwd())
+        self.assertEqual(txn.root, os.path.join(parent, "workdir"))
+        self.assertEqual(os.getcwd(), parent)
+    def test_checkopened(self):
+        os.mkdir("workdir")
+        txn = Transaction("workdir")
+        with self.assertRaises(RuntimeError):
+            txn.check_opened()
+        # No exception should be raised    
+        txn.check_opened(False)    
+        with txn:
+            txn.check_opened()
+            with self.assertRaises(RuntimeError):
+                txn.check_opened(False)
+    def test_checkinside(self):
+        os.mkdir("workdir")
+        os.mkdir("workdir/subdir")
+        os.mkdir("outsidedir")
+        txn=Transaction("workdir")
+        parent = os.getcwd()
+        outsider = os.path.realpath("outsidedir")
+        with self.assertRaises(ValueError):
+            txn.check_inside(parent)
+        with self.assertRaises(ValueError):
+            txn.check_inside(".")
+        self.assertEqual(txn.check_inside(os.path.realpath("workdir")),
+                         os.path.join(parent,"workdir"))
+        self.assertEqual(txn.check_inside("workdir"),
+                         os.path.join(parent,"workdir"))
+        self.assertEqual(txn.check_inside("workdir/subdir"),
+                         os.path.join(parent,"workdir","subdir"))
+        with txn:
+            with self.assertRaises(ValueError):
+                txn.check_inside(parent)
+            self.assertEqual(txn.check_inside("."), txn.root)
+            self.assertEqual(txn.check_inside("subdir"),
+                             os.path.join(txn.root,"subdir"))
+            with self.assertRaises(ValueError):
+                txn.check_inside(outsider)
+            with self.assertRaises(ValueError):
+                txn.check_inside(os.path.join(parent,"workdir"))
 
+            
 if __name__ == '__main__':
     unittest.main()

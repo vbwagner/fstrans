@@ -91,7 +91,7 @@ class Transaction(object):
             raise ValueError("Not a directory")
         if leave_snapshot is not None and leave_snapshot.find("/") != -1:
             raise ValueError("Snapshot name couldn't contain slashes")
-        self.root, self.commited = os.path.split(os.path.realpath(path))
+        self.parent, self.commited = os.path.split(os.path.realpath(path))
         self.workdir = "." + self.commited
         self.timeout = timeout
         self.leave_snapshot = leave_snapshot
@@ -110,9 +110,9 @@ class Transaction(object):
 
         If successefully starts transaction, returns self.
         """
-        tree = os.path.join(self.root, self.commited)
+        tree = os.path.join(self.parent, self.commited)
         msg = "directory %s already locked. Waiting" % tree
-        newtree = os.path.join(self.root, self.workdir)
+        newtree = os.path.join(self.parent, self.workdir)
         finish = time.time() + self.timeout
         self.cwd = os.getcwd()
         while time.time() < finish:
@@ -137,21 +137,21 @@ class Transaction(object):
         temporary working tree) if normal exit from context occurs,
         or temporary tree if exception was raised.
         """
-        tempdir = mkdtemp(dir=self.root)
+        tempdir = mkdtemp(dir=self.parent)
         os.chdir(self.cwd)
         self.opened = False
         if exch_type is None:
             if self.leave_snapshot is not None:
-                os.rename(os.path.join(self.root, self.commited),
-                          os.path.join(self.root,
+                os.rename(os.path.join(self.parent, self.commited),
+                          os.path.join(self.parent,
                                        time.strftime(self.leave_snapshot)))
             else:
-                os.rename(os.path.join(self.root, self.commited),
+                os.rename(os.path.join(self.parent, self.commited),
                           os.path.join(tempdir, self.commited))
-            os.rename(os.path.join(self.root, self.workdir),
-                      os.path.join(self.root, self.commited))
+            os.rename(os.path.join(self.parent, self.workdir),
+                      os.path.join(self.parent, self.commited))
         else:
-            os.rename(os.path.join(self.root, self.workdir),
+            os.rename(os.path.join(self.parent, self.workdir),
                       os.path.join(tempdir, self.commited))
     # Remove temporary directory tree
         for root, dirs, files in os.walk(tempdir, topdown=False):
@@ -177,11 +177,24 @@ class Transaction(object):
         If not, raises ValueError
         """
         fullname = os.path.realpath(name)
-        mydir = os.path.join(self.root, self.workdir)
+        mydir = self.root
         if fullname != mydir and not fullname.startswith(mydir + "/"):
             raise ValueError(("path '%s' should be"+\
             "inside working tree") % name)
         return fullname
+    @property
+    def root(self):
+        """
+        Return top of directory tree. If transaction is opened,
+        it is temporary working tree to be commited.
+
+        Otherwise it is directory which is passed to constructor
+        """
+        if self.opened:
+            return os.path.join(self.parent, self.workdir)
+        else:
+            return os.path.join(self.parent, self.commited)
+
     def open(self, name, mode='r', **kwargs):
         """
         Opens file inside transaction tree.
@@ -231,9 +244,12 @@ class Transaction(object):
         """
         self.check_opened()
         fullname = self.check_inside(path)
+        if os.stat(fullname).st_nlink == 1:
+            # Already cloned
+            return
         os.unlink(fullname)
-        prefixlen = len(os.path.join(self.root, self.workdir))
-        oldcopy = os.path.join(self.root, self.commited) + fullname[prefixlen:]
+        prefixlen = len(os.path.join(self.parent, self.workdir))
+        oldcopy = os.path.join(self.parent, self.commited) + fullname[prefixlen:]
         shutil.copyfile(oldcopy, fullname)
         shutil.copystat(oldcopy, fullname)
     def clonetree(self, path):
