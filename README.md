@@ -9,7 +9,7 @@ no other process such as webserver would access partially modified tree
 (although you can use external programs from your script to work with
 tree)
 
-It also serilizes write tree access - if one program  starts transaction
+It also serializes write tree access - if one program  starts transaction
 with some directory, other one, if started, would wait for some time for it to
 complete.
 
