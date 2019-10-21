@@ -11,8 +11,8 @@ Transaction object works as context manager and rolls back if exception
 is raised inside transaction.
 
 """
-# For Transaction
 import os
+import os.path
 import select
 import time
 import sys
@@ -30,6 +30,8 @@ def copy_tree(old, new):
     directories and hardlinking files.
     If top of new tree exists, rises FileExistsError
     """
+    old = os.path.abspath(old)
+    new = os.path.abspath(new)
     os.mkdir(new, 0o755)
     os.chmod(new, os.stat(old).st_mode)
     for (root, _, files) in os.walk(old):
@@ -154,12 +156,7 @@ class Transaction:
             os.rename(os.path.join(self.parent, self.workdir),
                       os.path.join(tempdir, self.commited))
     # Remove temporary directory tree
-        for root, dirs, files in os.walk(tempdir, topdown=False):
-            for name in files:
-                os.remove(os.path.join(root, name))
-            for name in dirs:
-                os.rmdir(os.path.join(root, name))
-        os.rmdir(tempdir)
+        shutil.rmtree(tempdir)
         # Should return false for exception to be reraised
         return exch_type is None
     def check_opened(self, should=True):
@@ -247,7 +244,8 @@ class Transaction:
             return
         os.unlink(fullname)
         prefixlen = len(os.path.join(self.parent, self.workdir))
-        oldcopy = os.path.join(self.parent, self.commited) + fullname[prefixlen:]
+        oldcopy = (os.path.join(self.parent, self.commited) +
+                   fullname[prefixlen:])
         shutil.copyfile(oldcopy, fullname)
         shutil.copystat(oldcopy, fullname)
     def clonetree(self, path):
