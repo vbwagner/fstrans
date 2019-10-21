@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='fstrans',
-    version='1.0',
+    version='1.0.1',
     author='Victor Wagner',
     author_email='vitus@wagner.pp.ru',
     description='Performs transactional modification on directory trees',

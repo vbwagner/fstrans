@@ -31,18 +31,28 @@ that original file would not be clobbered before commit.
 Installation
 ------------
 
-Just drop `fstrans.py` into your `site_python` directory.
-No proper setup is written yet
+You can install released version with `pip3 install fstrans`.
+If you prefer cutting age software, recommended way is
+
+```
+python3 setup.py sdist
+pip3 install ./dist/fstrans-1.0.tar.gz
+```
+
+Of course, you can install system-wide build your OS packages and so on.
+But if you are planning to do so, you probably don't need special
+instructions.
 
 Testing
 -------
 
 There is unittest-based test suite in the test directory.
 
+
 Run
 
 ```
-python3 -m unittest discover tests
+python3 setup.py test
 ```
 
 to run test suite.
