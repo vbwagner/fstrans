@@ -16,6 +16,7 @@ import os.path
 import select
 import time
 import sys
+import logging
 from tempfile import mkdtemp
 import shutil
 
@@ -117,15 +118,18 @@ class Transaction:
         newtree = os.path.join(self.parent, self.workdir)
         finish = time.time() + self.timeout
         self.cwd = os.getcwd()
+        log = None
         while time.time() < finish:
             try:
                 copy_tree(tree, newtree)
                 os.chdir(newtree)
-                print("", file=sys.stderr, flush=True)
+                if log:
+                    log.warning("Successfully locked tree %s" % tree)
                 self.opened = True
                 return self
             except FileExistsError:
-                print(msg, file=sys.stderr, end='', flush=True)
+                log = logging.getLogger("fstrans")
+                log.warning(msg)
                 msg = "."
                 # Wait for a while
                 select.select([sys.stdin], [], [sys.stdin], 0.5)
