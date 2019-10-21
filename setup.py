@@ -21,5 +21,6 @@ setuptools.setup(
         'Operating System :: POSIX'
     ],
     python_requires='>=3.5',
+    test_suite="fstrans.tests.testfstrans",
     include_package_data=True,
 )   
